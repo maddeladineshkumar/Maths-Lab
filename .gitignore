@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Form submission / internal files (Strictly excluded)
+FORM_SUBMISSION_ANSWERS.*
+generate_submission_pdf.py
+cb.ai.u4aid25129.pdf
+Pasted image*.png
+proposal_text.txt
+build_html_pages.py
+generate_codebase_js.py
+generate_codebase_pdf.py
+
+# Editor / scratch
+.idea/
+.vscode/
+*.swp
+*~
+scratch/
+
+# Packaging folder (contents tracked via codebase/ and zip)
+CRT_Nano_Signal_Processing_Codebase/

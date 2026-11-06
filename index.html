@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRT-Nano: Low-Cost Optical Capillary Refill Time Platform</title>
+  <link rel="stylesheet" href="web/style.css">
+</head>
+<body>
+
+  <!-- Sticky Editorial Navigation Header -->
+  <header>
+    <div class="header-container">
+      <div class="brand-block">
+        <h1>CRT-Nano <span class="brand-badge">23MAT204 LAB</span></h1>
+        <div class="brand-subtitle">Low-Cost Optical Capillary Refill Time Measurement System</div>
+      </div>
+      <nav class="nav-pills">
+        <button class="active" data-target="tab-simulator">Live Simulator</button>
+        <button data-target="tab-circuit">Virtual Circuit</button>
+        <button data-target="tab-costs">Components & Cost</button>
+        <button data-target="tab-validation">Validation (E1-E7)</button>
+        <button data-target="tab-codebase">Codebase Explorer</button>
+        <button data-target="tab-downloads">Project Downloads</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Banner Card -->
+    <div class="hero-card">
+      <div class="hero-grid">
+        <div class="hero-text">
+          <h2>Frugal Healthcare Edge Device: Capillary Refill Time ($CRT_{90}$)</h2>
+          <p>
+            An optical reflectance photoplethysmography (PPG) edge instrument engineered for the Arduino Nano V3 (ATmega328P).
+            Provides automated optical recovery time extraction using baseline normalisation, dual-estimator consensus, 
+            and 6-stage algorithmic quality gates to eliminate subjective visual timing discordance in acute triage.
+          </p>
+          <div class="team-chips">
+            <div class="chip"><strong>Student 1:</strong> M. Dinesh Kumar (<code>CB.AI.U4AID25126</code>)</div>
+            <div class="chip"><strong>Student 2:</strong> Malepati Venkata Sai Sujan (<code>CB.AI.U4AID25129</code>)</div>
+            <div class="chip"><strong>Course:</strong> 23MAT204 - Healthcare AI / Edge Challenge</div>
+            <div class="chip"><strong>Instructor:</strong> Dr. Suman Dutta</div>
+          </div>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric-row">
+            <span>Core Component Cost:</span>
+            <strong>Rs. 287 / Rs. 357</strong>
+          </div>
+          <div class="metric-row">
+            <span>Estimation Accuracy (MAE):</span>
+            <strong>0.181 s (&le; 0.40s)</strong>
+          </div>
+          <div class="metric-row">
+            <span>MCU CPU Utilization:</span>
+            <strong>1.60% (100 Hz ISR)</strong>
+          </div>
+          <div class="metric-row">
+            <span>Fault Gate Specificity:</span>
+            <strong>100% Rejection</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: LIVE SIMULATOR -->
+    <div id="tab-simulator" class="section-panel active">
+      <div class="simulator-layout">
+        <!-- Left: Live Waveform Canvas & Results -->
+        <div>
+          <div class="card">
+            <div class="card-title">
+              <span>Real-Time PPG Optical Refill Trajectory</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="soundToggleBtn" class="sound-toggle-btn" onclick="toggleSound()">🔊 Sound ON</button>
+                <span id="stateBadge" class="state-badge badge-idle">IDLE</span>
+              </div>
+            </div>
+            <div class="canvas-container">
+              <canvas id="ppgCanvas"></canvas>
+            </div>
+            
+            <div class="results-grid">
+              <div class="result-box">
+                <div class="label">Estimated $CRT_{90}$</div>
+                <div id="estCRT" class="value" style="color: var(--accent-warm);">-- s</div>
+                <div class="subtext">Threshold / Model consensus</div>
+              </div>
+              <div class="result-box">
+                <div class="label">Clinical Classification</div>
+                <div id="classTag" class="value" style="font-size: 1.05rem;">Pending</div>
+                <div class="subtext">Normal &lt;2s | Prolonged &gt;3s</div>
+              </div>
+              <div class="result-box">
+                <div class="label">Blanching Swing (&Delta;ADC)</div>
+                <div id="blanchDelta" class="value">-- counts</div>
+                <div class="subtext">Gate F3 threshold: &ge; 35</div>
+              </div>
+              <div class="result-box">
+                <div class="label">Quality Gate Check</div>
+                <div id="qualityStatus" class="value" style="font-size: 0.95rem; font-weight: 600;">Standby</div>
+                <div class="subtext">F1 - F6 Fault Diagnostics</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Algorithm Explanation Card -->
+          <div class="card">
+            <div class="card-title">Mathematical Processing Chain</div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>1. Continuous Tissue Model:</strong> $x(t) = R_0 - \kappa v(t) + a v(t) p(t) + d(t) + n(t)$ where $v(t) \in [0, 1]$.
+            </p>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>2. Reperfusion Dynamics:</strong> $v(t) = 1 - (1 - v_{min}) e^{-(t - t_0)/\tau}$ for $t \ge t_0$.
+            </p>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">
+              <strong>3. Operational Endpoint ($CRT_{90}$):</strong> Defined as $v(t) = 0.90 \implies CRT_{90} = \tau \ln\left(\frac{1 - v_{min}}{0.1}\right)$. Dual estimators evaluate both sample-by-sample 90% threshold dwell and Levenberg-Marquardt non-linear exponential fitting.
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: Control Sliders & Artifact Injectors -->
+        <div>
+          <div class="card">
+            <div class="card-title">Simulation Parameters & Presets</div>
+            
+            <!-- Preset Scenario Chips -->
+            <div class="preset-container">
+              <div class="preset-label">Quick Clinical & Test Presets:</div>
+              <div class="preset-chips">
+                <button class="preset-chip active" data-preset="normal" onclick="applyPreset('normal')">🟢 Normal (1.5s)</button>
+                <button class="preset-chip" data-preset="borderline" onclick="applyPreset('borderline')">🟡 Borderline (2.5s)</button>
+                <button class="preset-chip" data-preset="prolonged" onclick="applyPreset('prolonged')">🔴 Prolonged (4.2s)</button>
+                <button class="preset-chip" data-preset="f2_wander" onclick="applyPreset('f2_wander')">⚠️ F2 Wander</button>
+                <button class="preset-chip" data-preset="f3_weak" onclick="applyPreset('f3_weak')">⚠️ F3 Weak Blanch</button>
+                <button class="preset-chip" data-preset="f4_motion" onclick="applyPreset('f4_motion')">⚠️ F4 Motion</button>
+                <button class="preset-chip" data-preset="f6_lift" onclick="applyPreset('f6_lift')">⚠️ F6 Detached</button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label>True $CRT_{90}$ Setting: <span id="crtVal" class="val-badge">2.0 s</span></label>
+              <input type="range" id="crtSlider" min="0.5" max="6.0" step="0.1" value="2.0">
+            </div>
+
+            <div class="control-group">
+              <label>Residual Volume ($v_{min}$ Blanch): <span id="vminVal" class="val-badge">0.20</span></label>
+              <input type="range" id="vminSlider" min="0.05" max="0.45" step="0.05" value="0.20">
+            </div>
+
+            <div class="control-group">
+              <label>Heart Rate: <span id="hrVal" class="val-badge">75 bpm</span></label>
+              <input type="range" id="hrSlider" min="50" max="130" step="5" value="75">
+            </div>
+
+            <div class="control-group">
+              <label>Signal-to-Noise Ratio: <span id="snrVal" class="val-badge">24 dB</span></label>
+              <input type="range" id="snrSlider" min="10" max="35" step="1" value="24">
+            </div>
+
+            <div class="control-group">
+              <label>Baseline Drift Pattern:</label>
+              <select id="driftSelect">
+                <option value="none">None (Stable Baseline)</option>
+                <option value="sinusoidal">Slow Sinusoidal (Respiration ~0.25 Hz)</option>
+                <option value="linear">Linear Thermal Drift</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label>Inject Test Fault Condition:</label>
+              <select id="artifactSelect">
+                <option value="none">Nominal Clean Trace</option>
+                <option value="unstable_baseline">Unstable Baseline Wander (F2)</option>
+                <option value="weak_blanch">Inadequate Blanching Force (F3)</option>
+                <option value="motion_recovery">Recovery Motion Artefact (F4)</option>
+                <option value="finger_lift">Premature Finger Detachment (F6)</option>
+              </select>
+            </div>
+
+            <div class="btn-row">
+              <button id="btnStart" class="btn btn-primary" style="flex: 2;">▶ Run Live Trial</button>
+              <button id="btnReset" class="btn btn-secondary" style="flex: 1;">↺ Reset</button>
+              <button id="btnExportCSV" class="btn btn-secondary" onclick="exportSimulationCSV()" title="Export signal trace to CSV" style="flex: 1;">📥 CSV</button>
+            </div>
+            
+            <p style="font-size: 0.76rem; color: var(--text-light); margin-top: 10px; text-align: center;">
+              Web Audio synthesizer generates audible cues (ready tone, press cue, release tone, success chime).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: VIRTUAL CIRCUIT -->
+    <div id="tab-circuit" class="section-panel">
+      <div class="card">
+        <div class="card-title">
+          <span>Virtual Circuit Schematic & Hardware Pinout</span>
+          <a href="CRT_Nano_Virtual_Circuit_Diagram.pdf" download class="btn btn-secondary btn-sm">📄 Download 1-Page PDF</a>
+        </div>
+        <div class="circuit-img-container">
+          <img src="circuit/circuit_diagram.png" alt="CRT-Nano Virtual Circuit Schematic">
+        </div>
+        <div style="margin-top: 18px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nano Pin</th>
+                <th>Subsystem Connection</th>
+                <th>Signal Type</th>
+                <th>Functional Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>A0</strong></td>
+                <td>Pulse Sensor (PPG Module) SIG</td>
+                <td>Analog (0–5V)</td>
+                <td>Acquires raw reflectance signal modulated by capillary hemoglobin absorption.</td>
+              </tr>
+              <tr>
+                <td><strong>D8</strong></td>
+                <td>Piezo Transducer (+) via 330&Omega;</td>
+                <td>PWM / Square Wave</td>
+                <td>Acoustic user feedback (cue beeps, release prompt, victory fanfare, error buzzer).</td>
+              </tr>
+              <tr>
+                <td><strong>D9</strong></td>
+                <td>SG90 Micro Servo PWM (Orange)</td>
+                <td>Servo Control (50 Hz)</td>
+                <td>Optional motorized press arm actuator with conservative angle travel limits.</td>
+              </tr>
+              <tr>
+                <td><strong>D2</strong></td>
+                <td>Tactile Button to GND (Pull-Up)</td>
+                <td>Digital Input</td>
+                <td>Manual trigger / configuration mode toggle jumper.</td>
+              </tr>
+              <tr>
+                <td><strong>A1</strong></td>
+                <td>NTC 10k&Omega; Thermistor Divider</td>
+                <td>Analog (0–5V)</td>
+                <td>Optional ambient/finger skin temperature context acquisition.</td>
+              </tr>
+              <tr>
+                <td><strong>5V / GND</strong></td>
+                <td>Regulated Power Bus</td>
+                <td>Power Rail</td>
+                <td>Decoupled with 10&mu;F electrolytic + 0.1&mu;F ceramic capacitors to suppress servo inrush noise.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: COMPONENTS & COST -->
+    <div id="tab-costs" class="section-panel">
+      <div class="card">
+        <div class="card-title">Bill of Materials & Cost Optimization</div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px;">
+          Designed under strict frugal healthcare engineering principles. The total bill of materials utilizes only <strong>31.3%</strong> (Manual) 
+          or <strong>38.9%</strong> (Servo-assisted) of the allotted kit budget ceiling (<strong>Rs. 360</strong>).
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Kit Item</th>
+              <th>Component Name</th>
+              <th>Technical Role</th>
+              <th>Unit Cost (INR)</th>
+              <th>Configuration</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Kit #2</td>
+              <td><strong>Arduino Nano V3 (ATmega328P)</strong></td>
+              <td>10-bit ADC sampling, digital filtering, 7-state FSM, serial telemetry</td>
+              <td>Rs. 155</td>
+              <td>Both</td>
+            </tr>
+            <tr>
+              <td>Kit #3</td>
+              <td><strong>Pulse Sensor (PPG Clone Module)</strong></td>
+              <td>565nm green LED + photodetector for optical tissue reflectance</td>
+              <td>Rs. 75</td>
+              <td>Both</td>
+            </tr>
+            <tr>
+              <td>Kit #7</td>
+              <td><strong>Piezo Transducer Disc / Buzzer</strong></td>
+              <td>Audio tone cues (ready, press prompt, release beep, validation chime)</td>
+              <td>Rs. 12</td>
+              <td>Both</td>
+            </tr>
+            <tr>
+              <td>Kit #11</td>
+              <td><strong>Premium Jumper Wires (Bundle)</strong></td>
+              <td>Point-to-point breadboard and direct pin interconnects</td>
+              <td>Rs. 35</td>
+              <td>Both</td>
+            </tr>
+            <tr>
+              <td>Kit #13</td>
+              <td><strong>Resistor Pack (330&Omega;, 10k&Omega;)</strong></td>
+              <td>Piezo current limiting and thermistor voltage division</td>
+              <td>Rs. 10</td>
+              <td>Both</td>
+            </tr>
+            <tr>
+              <td>Kit #6</td>
+              <td><strong>SG90 Micro Servo (Optional)</strong></td>
+              <td>Optional motorized press arm mechanism for repeatability</td>
+              <td>Rs. 70</td>
+              <td>Servo Only</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+          <div class="result-box" style="background: #F0FDF4; border-color: #BBF7D0;">
+            <div class="label" style="color: #166534;">Core Manual-Press Configuration</div>
+            <div class="value" style="color: #14532D;">Rs. 287.00</div>
+            <div class="subtext" style="color: #15803D;">Rs. 155 + 75 + 12 + 35 + 10 = Rs. 287 (31.3% of kit value)</div>
+          </div>
+          <div class="result-box" style="background: #FFFBEB; border-color: #FDE68A;">
+            <div class="label" style="color: #92400E;">Servo-Assisted Research Configuration</div>
+            <div class="value" style="color: #78350F;">Rs. 357.00</div>
+            <div class="subtext" style="color: #B45309;">Rs. 287 + 70 (Servo) = Rs. 357 (&le; Rs. 360 Budget Ceiling)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: VALIDATION BENCHMARKS -->
+    <div id="tab-validation" class="section-panel">
+      <div class="card">
+        <div class="card-title">Monte-Carlo Simulation Validation Experiments (E1 to E7)</div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+          Conducted extensive automated synthetic evaluations across 108 trials varying $CRT_{90}$ from 0.5s to 6.0s, SNR from 10dB to 30dB, 
+          and heart rates from 60 to 120 bpm.
+        </p>
+
+        <div class="results-grid" style="margin-bottom: 20px;">
+          <div class="result-box">
+            <div class="label">MAE Error (E1)</div>
+            <div class="value" style="color: #059669;">0.181 s</div>
+            <div class="subtext">Target T1 (&le;0.40s): <strong>PASSED</strong></div>
+          </div>
+          <div class="result-box">
+            <div class="label">Estimation Bias (E1)</div>
+            <div class="value" style="color: #059669;">+0.153 s</div>
+            <div class="subtext">Target T2 (&le;0.20s): <strong>PASSED</strong></div>
+          </div>
+          <div class="result-box">
+            <div class="label">Noise MAE @ 10 dB (E2)</div>
+            <div class="value">0.119 s</div>
+            <div class="subtext">100% measurement availability</div>
+          </div>
+          <div class="result-box">
+            <div class="label">Fault Rejection (E6)</div>
+            <div class="value" style="color: #059669;">100.0%</div>
+            <div class="subtext">Zero false negatives on corrupt signals</div>
+          </div>
+          <div class="result-box">
+            <div class="label">MCU CPU Load (E7)</div>
+            <div class="value">1.60%</div>
+            <div class="subtext">98.4% idle headroom on ATmega328P</div>
+          </div>
+          <div class="result-box">
+            <div class="label">Total Cycle Time (E7)</div>
+            <div class="value">12.0 s</div>
+            <div class="subtext">Target T5 (&le;40s): <strong>PASSED</strong></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="circuit-img-container">
+            <img src="codebase/results/figures/fig1_sample_trace.png" alt="Figure 1: Sample Trace">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Fig 1: Optical Acquisition & State Transitions</div>
+          </div>
+          <div class="circuit-img-container">
+            <img src="codebase/results/figures/fig2_estimation_accuracy.png" alt="Figure 2: Accuracy">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Fig 2: Linear Correlation & Bland-Altman Agreement</div>
+          </div>
+          <div class="circuit-img-container">
+            <img src="codebase/results/figures/fig3_noise_and_faults.png" alt="Figure 3: Noise Robustness">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Fig 3: SNR Robustness & Fault Rejection Rates</div>
+          </div>
+          <div class="circuit-img-container">
+            <img src="codebase/results/figures/fig4_microcontroller_budget.png" alt="Figure 4: MCU Budget">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Fig 4: ATmega328P Timing & SRAM/Flash Headroom</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: CODEBASE EXPLORER -->
+    <div id="tab-codebase" class="section-panel">
+      <div class="hero-card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="margin-bottom: 4px;">Interactive Codebase & Firmware Explorer</h3>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">
+              Inspect all production Arduino C++ firmware, Python signal processing modules, unit tests, and validation metrics directly in the browser.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="CRT_Nano_Signal_Processing_Codebase.zip" download class="btn btn-primary btn-sm">⬇ Download ZIP (~1.3 MB)</a>
+            <a href="CRT_Nano_Signal_Processing_Codebase.pdf" download class="btn btn-secondary btn-sm">📄 Codebase PDF (~1.2 MB)</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-explorer">
+        <div class="code-tabs-header">
+          <div id="codeTabsNav" class="code-tabs-nav"></div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="codeDisplayLines" class="code-meta-badge">0 lines</span>
+            <button id="btnCopyCode" class="copy-btn" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy Source</button>
+          </div>
+        </div>
+        <div style="padding: 8px 16px; background: #252526; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+          <strong id="codeDisplayTitle" style="color: #F59E0B; font-size: 0.82rem; font-family: monospace;">File</strong>
+          <span id="codeDisplayDesc" style="color: #9CA3AF; font-size: 0.76rem;">Description</span>
+        </div>
+        <div class="code-view-container">
+          <pre><code id="codeDisplayPre">// Loading source code...</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: PROJECT DOWNLOADS -->
+    <div id="tab-downloads" class="section-panel">
+      <div class="card">
+        <div class="card-title">Project Engineering Deliverables & Downloads</div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+          All project code, virtual circuit schematics, verification datasets, and engineering reports:
+        </p>
+        
+        <div class="download-grid">
+          <!-- Card 1: Codebase ZIP -->
+          <div class="download-card">
+            <div>
+              <div class="download-card-header">
+                <div class="download-icon">📦</div>
+                <div>
+                  <div class="download-title">Complete Codebase ZIP</div>
+                  <div class="download-meta">CRT_Nano_Signal_Processing_Codebase.zip &bull; ~1.3 MB</div>
+                </div>
+              </div>
+              <div class="download-desc">
+                Production Arduino C++ firmware, complete Python simulation suite, 18 automated unit tests, 100 Hz CSV traces, and JSON benchmark metrics.
+              </div>
+            </div>
+            <div class="download-action">
+              <a href="CRT_Nano_Signal_Processing_Codebase.zip" download class="btn btn-primary btn-sm" style="width: 100%; text-align: center;">⬇ Download Codebase ZIP</a>
+            </div>
+          </div>
+
+          <!-- Card 2: Codebase PDF -->
+          <div class="download-card">
+            <div>
+              <div class="download-card-header">
+                <div class="download-icon">📄</div>
+                <div>
+                  <div class="download-title">Codebase Specification PDF</div>
+                  <div class="download-meta">CRT_Nano_Signal_Processing_Codebase.pdf &bull; ~1.2 MB</div>
+                </div>
+              </div>
+              <div class="download-desc">
+                Comprehensive 19-page engineering specification document containing full source code, firmware architecture, unit test execution logs, and validation figures.
+              </div>
+            </div>
+            <div class="download-action">
+              <a href="CRT_Nano_Signal_Processing_Codebase.pdf" download class="btn btn-secondary btn-sm" style="width: 100%; text-align: center;">📄 Download Codebase PDF</a>
+            </div>
+          </div>
+
+          <!-- Card 3: Virtual Circuit Diagram PDF -->
+          <div class="download-card">
+            <div>
+              <div class="download-card-header">
+                <div class="download-icon">⚡</div>
+                <div>
+                  <div class="download-title">Virtual Circuit Schematic</div>
+                  <div class="download-meta">CRT_Nano_Virtual_Circuit_Diagram.pdf &bull; ~74 KB</div>
+                </div>
+              </div>
+              <div class="download-desc">
+                Publication-grade vector schematic PDF: Complete Arduino Nano pinout, PPG optical sensor, piezo buzzer, and SG90 servo.
+              </div>
+            </div>
+            <div class="download-action">
+              <a href="CRT_Nano_Virtual_Circuit_Diagram.pdf" download class="btn btn-secondary btn-sm" style="width: 100%; text-align: center;">⬇ Download Schematic PDF</a>
+            </div>
+          </div>
+
+          <!-- Card 4: Technical Project Report -->
+          <div class="download-card">
+            <div>
+              <div class="download-card-header">
+                <div class="download-icon">📖</div>
+                <div>
+                  <div class="download-title">Technical Project Report</div>
+                  <div class="download-meta">PROJECT_REPORT_CRT_NANO.md &bull; ~11 KB</div>
+                </div>
+              </div>
+              <div class="download-desc">
+                Full 17-section engineering and clinical feasibility report detailing mathematical models, physiology, and experimental results.
+              </div>
+            </div>
+            <div class="download-action">
+              <a href="PROJECT_REPORT_CRT_NANO.md" download class="btn btn-secondary btn-sm" style="width: 100%; text-align: center;">⬇ Download Report (MD)</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script src="web/codebase_data.js"></script>
+  <script src="web/app.js"></script>
+</body>
+</html>
